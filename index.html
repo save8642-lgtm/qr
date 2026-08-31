@@ -12,10 +12,8 @@
 
 <title>QR & 텍스트 일치 검사</title>
 
-
 <!-- QR 인식 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
-
 
 <!-- OCR -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
@@ -30,6 +28,7 @@
 body {
 
   margin: 0;
+
   padding: 12px;
 
   background: #f2f3f5;
@@ -55,9 +54,9 @@ h2 {
 }
 
 
-/* ================================
+/* =========================
    카메라
-================================ */
+========================= */
 
 #cameraBox {
 
@@ -72,6 +71,7 @@ h2 {
   overflow: hidden;
 
 }
+
 
 #video {
 
@@ -94,13 +94,13 @@ h2 {
 
   position: absolute;
 
-  left: 5%;
+  left: 6%;
 
-  top: 20%;
+  top: 18%;
 
-  width: 90%;
+  width: 88%;
 
-  height: 60%;
+  height: 64%;
 
   border: 3px solid #00ff00;
 
@@ -115,7 +115,7 @@ h2 {
 
   position: absolute;
 
-  top: -32px;
+  top: -30px;
 
   left: 0;
 
@@ -132,7 +132,7 @@ h2 {
 }
 
 
-/* 초점 */
+/* 자동초점 표시 */
 
 #focusText {
 
@@ -140,15 +140,53 @@ h2 {
 
   bottom: 10px;
 
-  left: 0;
-
   width: 100%;
 
   color: white;
 
   font-size: 12px;
 
-  text-shadow: 0 1px 5px #000;
+  text-shadow: 0 1px 4px #000;
+
+}
+
+
+/* 스캔 라인 */
+
+#scanLine {
+
+  position: absolute;
+
+  left: 6%;
+
+  width: 88%;
+
+  height: 2px;
+
+  background: #00ff00;
+
+  top: 18%;
+
+  opacity: .8;
+
+  animation: scanMove 2s infinite;
+
+}
+
+
+@keyframes scanMove {
+
+  0% {
+    top: 18%;
+  }
+
+  50% {
+    top: 82%;
+  }
+
+  100% {
+    top: 18%;
+  }
 
 }
 
@@ -160,9 +198,9 @@ canvas {
 }
 
 
-/* ================================
+/* =========================
    버튼
-================================ */
+========================= */
 
 button {
 
@@ -172,7 +210,7 @@ button {
 
   margin-top: 12px;
 
-  border: none;
+  border: 0;
 
   border-radius: 10px;
 
@@ -192,30 +230,18 @@ button {
 }
 
 
-#scanButton {
-
-  background: #28a745;
-
-}
-
-
 #nextButton {
 
-  background: #6c757d;
+  display: none;
+
+  background: #343a40;
 
 }
 
 
-button:disabled {
-
-  background: #aaa;
-
-}
-
-
-/* ================================
+/* =========================
    상태
-================================ */
+========================= */
 
 #status {
 
@@ -234,9 +260,9 @@ button:disabled {
 }
 
 
-/* ================================
+/* =========================
    PASS / FAIL
-================================ */
+========================= */
 
 #result {
 
@@ -244,11 +270,11 @@ button:disabled {
 
   margin-top: 12px;
 
-  padding: 25px 10px;
+  padding: 22px 10px;
 
   border-radius: 14px;
 
-  font-size: 50px;
+  font-size: 46px;
 
   font-weight: 900;
 
@@ -277,9 +303,9 @@ button:disabled {
 }
 
 
-/* ================================
-   데이터
-================================ */
+/* =========================
+   비교 데이터
+========================= */
 
 .dataBox {
 
@@ -298,7 +324,7 @@ button:disabled {
 
 .row {
 
-  padding: 11px 0;
+  padding: 12px 0;
 
   border-bottom: 1px solid #eee;
 
@@ -318,16 +344,33 @@ button:disabled {
 
 .label {
 
-  display: inline-block;
+  display: block;
 
-  width: 90px;
+  margin-bottom: 5px;
+
+  font-weight: bold;
+
+  color: #555;
+
+}
+
+
+.value {
+
+  padding: 10px;
+
+  border-radius: 6px;
+
+  background: #f5f5f5;
 
   font-weight: bold;
 
 }
 
 
-/* OCR */
+/* =========================
+   OCR 상태
+========================= */
 
 #ocrStatus {
 
@@ -340,6 +383,20 @@ button:disabled {
 }
 
 
+/* =========================
+   검사次數
+========================= */
+
+#count {
+
+  margin-top: 8px;
+
+  color: #777;
+
+  font-size: 12px;
+
+}
+
 </style>
 
 </head>
@@ -351,12 +408,11 @@ button:disabled {
 <h2>📱 QR & 텍스트 일치 검사</h2>
 
 
-<!-- ================================
+<!-- =========================
      카메라
-================================ -->
+========================= -->
 
 <div id="cameraBox">
-
 
   <video
     id="video"
@@ -370,20 +426,18 @@ button:disabled {
   <div id="guide">
 
     <div id="guideText">
-
-      QR과 인쇄된 문자를 화면 안에 맞춰주세요
-
+      QR과 인쇄된 전체 문자를 화면에 맞춰주세요
     </div>
 
   </div>
 
 
+  <div id="scanLine"></div>
+
+
   <div id="focusText">
-
-    🔍 자동 초점 준비
-
+    🔍 자동 초점 준비 중
   </div>
-
 
 </div>
 
@@ -402,24 +456,11 @@ button:disabled {
 </button>
 
 
-<!-- 검사 버튼 -->
-
-<button
-  id="scanButton"
-  onclick="scanOnce()"
-  disabled>
-
-  🔎 검사하기
-
-</button>
-
-
 <!-- 다음 검사 -->
 
 <button
   id="nextButton"
-  onclick="nextInspection()"
-  disabled>
+  onclick="nextInspection()">
 
   🔄 다음 검사
 
@@ -449,7 +490,9 @@ button:disabled {
 <div id="result"></div>
 
 
-<!-- 인식 결과 -->
+<!-- =========================
+     검사 데이터
+========================= -->
 
 <div class="dataBox">
 
@@ -460,9 +503,11 @@ button:disabled {
       QR 내용
     </span>
 
-    <span id="qrValue">
+    <div
+      id="qrValue"
+      class="value">
       대기 중
-    </span>
+    </div>
 
   </div>
 
@@ -470,12 +515,14 @@ button:disabled {
   <div class="row">
 
     <span class="label">
-      인쇄 문자
+      제품 인쇄 내용
     </span>
 
-    <span id="textValue">
+    <div
+      id="textValue"
+      class="value">
       대기 중
-    </span>
+    </div>
 
   </div>
 
@@ -483,15 +530,24 @@ button:disabled {
   <div class="row">
 
     <span class="label">
-      비교
+      비교 결과
     </span>
 
-    <span id="compareValue">
+    <div
+      id="compareValue"
+      class="value">
       대기 중
-    </span>
+    </div>
 
   </div>
 
+
+</div>
+
+
+<div id="count">
+
+  검사 횟수: 0
 
 </div>
 
@@ -546,16 +602,12 @@ const ocrStatus =
   document.getElementById("ocrStatus");
 
 
-const focusText =
-  document.getElementById("focusText");
+const count =
+  document.getElementById("count");
 
 
 const startButton =
   document.getElementById("startButton");
-
-
-const scanButton =
-  document.getElementById("scanButton");
 
 
 const nextButton =
@@ -564,74 +616,46 @@ const nextButton =
 
 let stream = null;
 
-let cameraStarted = false;
+let worker = null;
 
-let processing = false;
+let cameraStarted = false;
 
 let ocrReady = false;
 
-let worker = null;
+let scanning = false;
+
+let processing = false;
+
+
+/*
+  한 번 검사 완료하면
+  다시 자동 검사하지 않음
+*/
 
 let inspectionFinished = false;
 
-
-/* ==================================================
-   OCR 초기화
-================================================== */
-
-
-async function initOCR() {
-
-  try {
-
-    ocrStatus.innerText =
-      "OCR 엔진 준비 중...";
-
-
-    worker =
-      await Tesseract.createWorker(
-        "eng"
-      );
-
-
-    ocrReady = true;
-
-
-    ocrStatus.innerText =
-      "✅ OCR 엔진 준비 완료";
-
-
-  }
-
-  catch(error) {
-
-    console.error(error);
-
-    ocrStatus.innerText =
-      "❌ OCR 엔진 준비 실패";
-
-  }
-
-}
+let scanCount = 0;
 
 
 /* ==================================================
-   문자열 정리
+   비교용 정규화
 ================================================== */
 
 
 /*
-  비교할 때
+  대소문자와 공백 차이는 무시합니다.
 
-  대문자/소문자 차이
-  공백
-  줄바꿈
+  예:
 
-  때문에 오판하지 않도록 정리합니다.
+  MRK00735AA-L LEG260808008
 
-  하이픈(-)은 유지합니다.
+  MRK00735AA-L  LEG260808008
+
+  MRK00735AA-L
+  LEG260808008
+
+  → 같은 값으로 판단
 */
-
 
 function normalize(text) {
 
@@ -639,15 +663,7 @@ function normalize(text) {
 
     .toUpperCase()
 
-    .replace(
-      /[\r\n]+/g,
-      " "
-    )
-
-    .replace(
-      /\s+/g,
-      " "
-    )
+    .replace(/\s+/g, "")
 
     .trim();
 
@@ -655,9 +671,13 @@ function normalize(text) {
 
 
 /* ==================================================
-   OCR 문자 보정
+   OCR 보정
 ================================================== */
 
+
+/*
+  OCR에서 흔히 발생하는 오류를 보정합니다.
+*/
 
 function correctOCR(text) {
 
@@ -665,33 +685,37 @@ function correctOCR(text) {
 
     .toUpperCase()
 
-    /*
-      OCR에서 자주 생기는
-      문자 오류를 일부 보정
-    */
+    .replace(/\r/g, "")
 
-    .replace(/\|/g, "I")
+    .replace(/O/g, "0")
 
-    .replace(/[“”"]/g, "")
+    .replace(/I/g, "1")
 
-    .replace(/[‘’']/g, "");
+    .replace(/\|/g, "1");
 
 }
 
 
 /* ==================================================
-   QR과 동일한 문자열 찾기
+   OCR에서 QR과 같은 전체 문자열 찾기
 ================================================== */
 
 
 function findMatchingText(
   ocrText,
-  qrText
+  qr
 ) {
 
 
-  const qr =
-    normalize(qrText);
+  if (!ocrText || !qr) {
+
+    return "";
+
+  }
+
+
+  const qrNormalized =
+    normalize(qr);
 
 
   const corrected =
@@ -699,51 +723,15 @@ function findMatchingText(
 
 
   /*
-    OCR 전체 문장을
-    한 줄로 변환
-  */
-
-  const ocr =
-    normalize(corrected);
-
-
-  /*
-    1. 전체 OCR과 정확히 같은 경우
-  */
-
-  if (
-    ocr === qr
-  ) {
-
-    return qr;
-
-  }
-
-
-  /*
-    2. OCR 문장 안에
-       QR 문자열이 들어있는 경우
-  */
-
-  if (
-    ocr.includes(qr)
-  ) {
-
-    return qr;
-
-  }
-
-
-  /*
-    3. OCR 줄 단위 검색
+    OCR 결과를 줄 단위로 가져옴
   */
 
   const lines =
     corrected
-      .split(/\r?\n/)
+      .split("\n")
       .map(
         line =>
-          normalize(line)
+          line.trim()
       )
       .filter(
         line =>
@@ -751,12 +739,39 @@ function findMatchingText(
       );
 
 
+  /*
+    OCR에 QR 전체가
+    들어있는지 확인
+  */
+
   for (
     const line of lines
   ) {
 
+
+    const lineNormalized =
+      normalize(line);
+
+
     if (
-      line === qr
+      lineNormalized ===
+      qrNormalized
+    ) {
+
+      return line;
+
+    }
+
+
+    /*
+      OCR에서 QR의 전체 내용이
+      일부 문자열로 붙어서 인식되는 경우
+    */
+
+    if (
+      lineNormalized.includes(
+        qrNormalized
+      )
     ) {
 
       return line;
@@ -766,7 +781,318 @@ function findMatchingText(
   }
 
 
+  /*
+    OCR 결과 전체를
+    공백 제거하여 비교
+  */
+
+  const allOCR =
+    normalize(corrected);
+
+
+  if (
+    allOCR.includes(
+      qrNormalized
+    )
+  ) {
+
+    return qr;
+
+  }
+
+
+  /*
+    QR과 완전히 같은 문자열이
+    없으면 OCR에서 가장 긴
+    영문/숫자/하이픈 조합을 찾음
+  */
+
+  const candidates =
+    corrected.match(
+      /[A-Z0-9-]{5,}/g
+    ) || [];
+
+
+  /*
+    두 개 이상의 OCR 조각이
+    QR과 연결되는 경우를 확인
+  */
+
+  for (
+    let i = 0;
+    i < candidates.length;
+    i++
+  ) {
+
+
+    let combined =
+      candidates[i];
+
+
+    for (
+      let j = i + 1;
+      j < candidates.length;
+      j++
+    ) {
+
+
+      combined +=
+        candidates[j];
+
+
+      if (
+        normalize(combined) ===
+        qrNormalized
+      ) {
+
+        return combined;
+
+      }
+
+    }
+
+  }
+
+
+  /*
+    일치하는 전체 문자열을
+    찾지 못함
+  */
+
   return "";
+
+}
+
+
+/* ==================================================
+   QR과 제품 텍스트 정확 비교
+================================================== */
+
+
+function compareExact(
+  qr,
+  printedText
+) {
+
+
+  const qrClean =
+    normalize(qr);
+
+
+  const textClean =
+    normalize(printedText);
+
+
+  /*
+    빈 값이면 FAIL
+  */
+
+  if (
+    qrClean.length === 0 ||
+    textClean.length === 0
+  ) {
+
+    return false;
+
+  }
+
+
+  /*
+    전체 문자열 정확히 비교
+  */
+
+  return (
+    qrClean ===
+    textClean
+  );
+
+}
+
+
+/* ==================================================
+   PASS
+================================================== */
+
+
+function showPASS(
+  qr,
+  printedText
+) {
+
+
+  result.className =
+    "pass";
+
+
+  result.innerHTML =
+    "PASS";
+
+
+  result.style.display =
+    "block";
+
+
+  status.innerText =
+    "✅ QR과 제품 인쇄 내용이 일치합니다.";
+
+
+  qrValue.innerText =
+    qr;
+
+
+  textValue.innerText =
+    printedText;
+
+
+  compareValue.innerText =
+    "✅ 일치";
+
+}
+
+
+/* ==================================================
+   FAIL
+================================================== */
+
+
+function showFAIL(
+  qr,
+  printedText
+) {
+
+
+  result.className =
+    "fail";
+
+
+  result.innerHTML =
+    "FAIL";
+
+
+  result.style.display =
+    "block";
+
+
+  status.innerText =
+    "❌ QR과 제품 인쇄 내용이 일치하지 않습니다.";
+
+
+  qrValue.innerText =
+    qr || "인식 실패";
+
+
+  textValue.innerText =
+    printedText || "인식 실패";
+
+
+  compareValue.innerText =
+    "❌ 불일치";
+
+}
+
+
+/* ==================================================
+   자동초점
+================================================== */
+
+
+async function enableAutoFocus() {
+
+
+  if (!stream) {
+
+    return;
+
+  }
+
+
+  try {
+
+
+    const tracks =
+      stream.getVideoTracks();
+
+
+    if (
+      tracks.length === 0
+    ) {
+
+      return;
+
+    }
+
+
+    const track =
+      tracks[0];
+
+
+    if (
+      !track.getCapabilities
+    ) {
+
+      return;
+
+    }
+
+
+    const capabilities =
+      track.getCapabilities();
+
+
+    /*
+      연속 자동초점 지원 여부 확인
+    */
+
+    if (
+      capabilities.focusMode &&
+      capabilities.focusMode.includes(
+        "continuous"
+      )
+    ) {
+
+
+      await track.applyConstraints({
+
+        advanced: [
+
+          {
+            focusMode:
+              "continuous"
+          }
+
+        ]
+
+      });
+
+
+      document.getElementById(
+        "focusText"
+      ).innerText =
+        "🔍 자동 초점 활성화";
+
+
+    }
+
+    else {
+
+
+      document.getElementById(
+        "focusText"
+      ).innerText =
+        "🔍 카메라 기본 자동초점 사용";
+
+    }
+
+  }
+
+  catch(error) {
+
+    console.log(
+      "자동초점 설정 오류:",
+      error
+    );
+
+  }
 
 }
 
@@ -789,19 +1115,6 @@ async function startCamera() {
   try {
 
 
-    if (
-      !navigator.mediaDevices ||
-      !navigator.mediaDevices.getUserMedia
-    ) {
-
-      status.innerText =
-        "❌ 이 브라우저에서는 카메라를 사용할 수 없습니다.";
-
-      return;
-
-    }
-
-
     status.innerText =
       "📷 카메라 권한 요청 중...";
 
@@ -810,35 +1123,30 @@ async function startCamera() {
       후면 카메라 우선
     */
 
-    const constraints = {
-
-      audio: false,
-
-      video: {
-
-        facingMode: {
-          ideal: "environment"
-        },
-
-        width: {
-          ideal: 1280
-        },
-
-        height: {
-          ideal: 720
-        }
-
-      }
-
-    };
-
-
     stream =
       await navigator
         .mediaDevices
-        .getUserMedia(
-          constraints
-        );
+        .getUserMedia({
+
+          audio: false,
+
+          video: {
+
+            facingMode: {
+              ideal: "environment"
+            },
+
+            width: {
+              ideal: 1280
+            },
+
+            height: {
+              ideal: 720
+            }
+
+          }
+
+        });
 
 
     video.srcObject =
@@ -868,20 +1176,12 @@ async function startCamera() {
       true;
 
 
-    startButton.disabled =
-      true;
-
-
-    startButton.innerText =
-      "📷 카메라 작동 중";
-
-
-    scanButton.disabled =
-      false;
+    startButton.style.display =
+      "none";
 
 
     status.innerText =
-      "✅ 카메라 준비 완료. 제품을 맞춰주세요.";
+      "✅ 카메라 준비 완료";
 
 
     /*
@@ -889,6 +1189,20 @@ async function startCamera() {
     */
 
     await enableAutoFocus();
+
+
+    /*
+      영상 준비
+    */
+
+    await waitForVideo();
+
+
+    /*
+      자동 QR 검색 시작
+    */
+
+    startScanning();
 
 
   }
@@ -939,94 +1253,81 @@ async function startCamera() {
 
 
 /* ==================================================
-   자동초점
+   비디오 준비
 ================================================== */
 
 
-async function enableAutoFocus() {
+function waitForVideo() {
+
+
+  return new Promise(
+    function(resolve) {
+
+
+      if (
+        video.readyState >= 2 &&
+        video.videoWidth > 0
+      ) {
+
+        resolve();
+
+        return;
+
+      }
+
+
+      video.onloadedmetadata =
+        function() {
+
+          resolve();
+
+        };
+
+    }
+  );
+
+}
+
+
+/* ==================================================
+   OCR 준비
+================================================== */
+
+
+async function initOCR() {
 
 
   try {
 
 
-    if (!stream) {
-
-      return;
-
-    }
+    ocrStatus.innerText =
+      "OCR 엔진 준비 중...";
 
 
-    const track =
-      stream.getVideoTracks()[0];
+    worker =
+      await Tesseract.createWorker(
+        "eng"
+      );
 
 
-    if (!track) {
-
-      return;
-
-    }
+    ocrReady =
+      true;
 
 
-    /*
-      카메라가 지원하는 기능 확인
-    */
+    ocrStatus.innerText =
+      "✅ OCR 준비 완료";
 
-    const capabilities =
-      track.getCapabilities
-        ? track.getCapabilities()
-        : {};
-
-
-    /*
-      Continuous autofocus 지원
-    */
-
-    if (
-      capabilities.focusMode &&
-      capabilities.focusMode.includes(
-        "continuous"
-      )
-    ) {
-
-
-      await track.applyConstraints({
-
-        advanced: [
-
-          {
-            focusMode:
-              "continuous"
-          }
-
-        ]
-
-      });
-
-
-      focusText.innerText =
-        "🔍 자동 초점 활성화";
-
-
-    }
-
-    else {
-
-      focusText.innerText =
-        "🔍 카메라 자동 초점 사용";
-
-    }
 
   }
 
   catch(error) {
 
-    console.log(
-      "자동초점 설정:",
-      error
-    );
 
-    focusText.innerText =
-      "🔍 카메라 기본 자동 초점";
+    console.error(error);
+
+
+    ocrStatus.innerText =
+      "❌ OCR 엔진 준비 실패";
 
   }
 
@@ -1034,19 +1335,46 @@ async function enableAutoFocus() {
 
 
 /* ==================================================
-   한 번만 검사
+   QR 자동 검색
 ================================================== */
 
 
-async function scanOnce() {
+function startScanning() {
+
+
+  if (scanning) {
+
+    return;
+
+  }
+
+
+  scanning =
+    true;
+
+
+  requestAnimationFrame(
+    scanLoop
+  );
+
+}
+
+
+/* ==================================================
+   스캔 루프
+================================================== */
+
+
+async function scanLoop() {
 
 
   /*
-    이미 검사 완료면
+    검사 완료 후에는
     다시 검사하지 않음
   */
 
   if (
+    !scanning ||
     inspectionFinished
   ) {
 
@@ -1055,21 +1383,55 @@ async function scanOnce() {
   }
 
 
+  /*
+    OCR 중이면 기다림
+  */
+
+  if (!processing) {
+
+    await scanQR();
+
+  }
+
+
+  /*
+    계속 반복해서 QR을 찾는 것은
+    검사 전 단계에서만 실행
+  */
+
   if (
-    !cameraStarted
+    !inspectionFinished
   ) {
 
-    alert(
-      "먼저 카메라를 시작해주세요."
+
+    setTimeout(
+      function() {
+
+        requestAnimationFrame(
+          scanLoop
+        );
+
+      },
+      100
     );
 
-    return;
-
   }
+
+}
+
+
+/* ==================================================
+   QR 검사
+================================================== */
+
+
+async function scanQR() {
 
 
   if (
-    processing
+    !cameraStarted ||
+    video.videoWidth <= 0 ||
+    video.videoHeight <= 0
   ) {
 
     return;
@@ -1077,12 +1439,164 @@ async function scanOnce() {
   }
 
 
+  /*
+    모바일 처리 속도 향상
+  */
+
+  const maxWidth =
+    960;
+
+
+  let width =
+    video.videoWidth;
+
+
+  let height =
+    video.videoHeight;
+
+
   if (
-    !ocrReady
+    width > maxWidth
   ) {
+
+
+    const ratio =
+      maxWidth / width;
+
+
+    width =
+      maxWidth;
+
+
+    height =
+      Math.round(
+        height * ratio
+      );
+
+  }
+
+
+  canvas.width =
+    width;
+
+
+  canvas.height =
+    height;
+
+
+  ctx.drawImage(
+    video,
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  const imageData =
+    ctx.getImageData(
+      0,
+      0,
+      width,
+      height
+    );
+
+
+  let qr = "";
+
+
+  /*
+    QR 찾기
+  */
+
+  if (window.jsQR) {
+
+
+    const code =
+      jsQR(
+        imageData.data,
+        imageData.width,
+        imageData.height,
+        {
+          inversionAttempts:
+            "attemptBoth"
+        }
+      );
+
+
+    if (code) {
+
+      qr =
+        code.data.trim();
+
+    }
+
+  }
+
+
+  /*
+    QR 없으면 계속 찾음
+  */
+
+  if (!qr) {
+
 
     status.innerText =
-      "⏳ OCR 엔진 준비 중입니다.";
+      "🔍 QR 코드 찾는 중...";
+
+
+    return;
+
+  }
+
+
+  /*
+    QR 발견
+  */
+
+  qrValue.innerText =
+    qr;
+
+
+  status.innerText =
+    "✅ QR 인식 완료";
+
+
+  /*
+    OCR 준비 전이면 대기
+  */
+
+  if (!ocrReady) {
+
+
+    status.innerText =
+      "⏳ OCR 엔진 준비 중...";
+
+
+    return;
+
+  }
+
+
+  /*
+    QR이 발견된 순간
+    OCR 실행
+  */
+
+  await runOCR(qr);
+
+}
+
+
+/* ==================================================
+   OCR 검사
+================================================== */
+
+
+async function runOCR(qr) {
+
+
+  if (processing) {
 
     return;
 
@@ -1093,207 +1607,27 @@ async function scanOnce() {
     true;
 
 
-  scanButton.disabled =
-    true;
-
-
-  nextButton.disabled =
-    true;
-
-
-  result.style.display =
-    "none";
-
-
-  status.innerText =
-    "🔎 QR 코드 인식 중...";
-
-
   try {
 
 
-    /*
-      카메라 프레임 캡처
-    */
+    scanCount++;
 
-    const width =
-      video.videoWidth;
 
-
-    const height =
-      video.videoHeight;
-
-
-    if (
-      width <= 0 ||
-      height <= 0
-    ) {
-
-      throw new Error(
-        "카메라 영상이 준비되지 않았습니다."
-      );
-
-    }
-
-
-    /*
-      모바일 처리 속도를 위해
-      최대 1280px
-    */
-
-    const maxWidth =
-      1280;
-
-
-    let drawWidth =
-      width;
-
-
-    let drawHeight =
-      height;
-
-
-    if (
-      drawWidth > maxWidth
-    ) {
-
-      const ratio =
-        maxWidth /
-        drawWidth;
-
-
-      drawWidth =
-        maxWidth;
-
-
-      drawHeight =
-        Math.round(
-          drawHeight *
-          ratio
-        );
-
-    }
-
-
-    canvas.width =
-      drawWidth;
-
-
-    canvas.height =
-      drawHeight;
-
-
-    ctx.drawImage(
-
-      video,
-
-      0,
-      0,
-
-      drawWidth,
-      drawHeight
-
-    );
-
-
-    /*
-      QR 인식
-    */
-
-    const imageData =
-      ctx.getImageData(
-        0,
-        0,
-        drawWidth,
-        drawHeight
-      );
-
-
-    let qrText = "";
-
-
-    if (
-      window.jsQR
-    ) {
-
-
-      const code =
-        jsQR(
-
-          imageData.data,
-
-          imageData.width,
-
-          imageData.height,
-
-          {
-            inversionAttempts:
-              "attemptBoth"
-          }
-
-        );
-
-
-      if (code) {
-
-        qrText =
-          code.data.trim();
-
-      }
-
-    }
-
-
-    /*
-      QR 실패
-    */
-
-    if (!qrText) {
-
-
-      result.className =
-        "fail";
-
-
-      result.innerHTML =
-        "FAIL";
-
-
-      result.style.display =
-        "block";
-
-
-      status.innerText =
-        "❌ QR 코드를 인식하지 못했습니다.";
-
-
-      compareValue.innerText =
-        "❌ QR 인식 실패";
-
-
-      nextButton.disabled =
-        false;
-
-
-      inspectionFinished =
-        true;
-
-
-      return;
-
-    }
-
-
-    qrValue.innerText =
-      qrText;
+    count.innerText =
+      "검사 횟수: " +
+      scanCount;
 
 
     status.innerText =
-      "✅ QR 인식 완료 → 제품 문자 확인 중...";
+      "🔎 제품에 인쇄된 전체 텍스트 확인 중...";
+
+
+    ocrStatus.innerText =
+      "🔎 OCR 문자 인식 중...";
 
 
     /*
-      OCR 실행
+      OCR
     */
 
     const ocrResult =
@@ -1302,114 +1636,112 @@ async function scanOnce() {
       );
 
 
-    const detectedText =
+    const ocrText =
       ocrResult.data.text || "";
 
 
     console.log(
-      "OCR 결과:",
-      detectedText
+      "OCR 원문:",
+      ocrText
     );
 
 
     /*
-      QR과 같은 문자열이
-      OCR에 있는지 확인
+      QR과 같은 전체 문자열을 찾음
     */
 
-    const matchedText =
+    const printedText =
       findMatchingText(
-        detectedText,
-        qrText
+        ocrText,
+        qr
       );
 
 
     /*
-      ============================
-      PASS
-      ============================
+      인식 결과 표시
     */
 
-    if (
-      matchedText
-    ) {
+    textValue.innerText =
+      printedText ||
+      "인쇄 문자 인식 실패";
 
 
-      textValue.innerText =
-        matchedText;
+    /*
+      전체 문자열이 인식되지 않으면
+      FAIL 처리
+    */
+
+    if (!printedText) {
 
 
-      compareValue.innerText =
-        "✅ 일치";
-
-
-      result.className =
-        "pass";
-
-
-      result.innerHTML =
-        "PASS";
-
-
-      result.style.display =
-        "block";
-
-
-      status.innerText =
-        "✅ QR과 제품 인쇄 문자가 일치합니다.";
+      showFAIL(
+        qr,
+        "인쇄 문자 인식 실패"
+      );
 
 
       ocrStatus.innerText =
-        "검사 완료";
+        "❌ 전체 문자열을 인식하지 못했습니다.";
 
+
+      /*
+        여기서 검사 종료
+      */
+
+      finishInspection();
+
+
+      return;
 
     }
 
 
     /*
-      ============================
+      QR과 제품 텍스트
+      전체 문자열 정확 비교
+    */
+
+    const matched =
+      compareExact(
+        qr,
+        printedText
+      );
+
+
+    /*
+      PASS
+    */
+
+    if (matched) {
+
+
+      showPASS(
+        qr,
+        printedText
+      );
+
+
+      ocrStatus.innerText =
+        "✅ 검사 완료";
+
+
+    }
+
+    /*
       FAIL
-      ============================
     */
 
     else {
 
 
-      const displayOCR =
-        normalize(
-          correctOCR(
-            detectedText
-          )
-        );
-
-
-      textValue.innerText =
-        displayOCR ||
-        "문자 인식 실패";
-
-
-      compareValue.innerText =
-        "❌ 불일치";
-
-
-      result.className =
-        "fail";
-
-
-      result.innerHTML =
-        "FAIL";
-
-
-      result.style.display =
-        "block";
-
-
-      status.innerText =
-        "❌ QR과 제품 인쇄 문자가 일치하지 않습니다.";
+      showFAIL(
+        qr,
+        printedText
+      );
 
 
       ocrStatus.innerText =
-        "검사 완료";
+        "❌ 검사 완료";
 
     }
 
@@ -1418,16 +1750,7 @@ async function scanOnce() {
       검사 종료
     */
 
-    inspectionFinished =
-      true;
-
-
-    /*
-      다음 검사 버튼 활성화
-    */
-
-    nextButton.disabled =
-      false;
+    finishInspection();
 
 
   }
@@ -1436,39 +1759,69 @@ async function scanOnce() {
 
 
     console.error(
-      "검사 오류:",
+      "OCR 오류:",
       error
     );
 
 
-    result.className =
-      "fail";
+    showFAIL(
+      qr,
+      "OCR 오류"
+    );
 
 
-    result.innerHTML =
-      "ERROR";
-
-
-    result.style.display =
-      "block";
-
-
-    status.innerText =
-      "❌ 검사 중 오류가 발생했습니다.";
-
-
-    nextButton.disabled =
-      false;
-
-
-    inspectionFinished =
-      true;
+    finishInspection();
 
   }
 
 
   processing =
+  false;
+
+}
+
+
+/* ==================================================
+   검사 종료
+================================================== */
+
+
+function finishInspection() {
+
+
+  /*
+    중요:
+    자동 반복검사를 완전히 중지
+  */
+
+  inspectionFinished =
+    true;
+
+
+  scanning =
     false;
+
+
+  /*
+    다음 검사 버튼 표시
+  */
+
+  nextButton.style.display =
+    "block";
+
+
+  /*
+    스캔 라인 정지
+  */
+
+  document.getElementById(
+    "scanLine"
+  ).style.display =
+    "none";
+
+
+  status.innerText +=
+    "  다음 검사는 버튼을 눌러주세요.";
 
 }
 
@@ -1482,11 +1835,15 @@ function nextInspection() {
 
 
   /*
-    결과 초기화
+    이전 결과 초기화
   */
 
-  result.style.display =
-    "none";
+  inspectionFinished =
+    false;
+
+
+  processing =
+    false;
 
 
   qrValue.innerText =
@@ -1501,28 +1858,33 @@ function nextInspection() {
     "대기 중";
 
 
+  result.style.display =
+    "none";
+
+
   ocrStatus.innerText =
-    "다음 검사 대기";
+    "다음 제품 검사 대기 중";
 
 
   status.innerText =
-    "📷 다음 제품을 카메라에 맞춰주세요.";
+    "🔍 QR 코드와 제품 인쇄 내용을 화면에 맞춰주세요.";
 
 
   /*
-    다시 검사 가능
+    스캔 라인 다시 표시
   */
 
-  inspectionFinished =
-    false;
+  document.getElementById(
+    "scanLine"
+  ).style.display =
+    "block";
 
 
-  nextButton.disabled =
-    true;
+  /*
+    다시 QR 검색 시작
+  */
 
-
-  scanButton.disabled =
-    false;
+  startScanning();
 
 }
 
@@ -1537,7 +1899,7 @@ window.addEventListener(
   function() {
 
     /*
-      OCR은 미리 준비
+      OCR 엔진을 미리 준비
     */
 
     initOCR();
@@ -1547,6 +1909,7 @@ window.addEventListener(
 
 
 </script>
+
 
 </body>
 
