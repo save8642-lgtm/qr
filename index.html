@@ -1,961 +1,1554 @@
+```html
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>QR & 시리얼 자동 검증</title>
+<meta charset="UTF-8">
 
-  <!-- QR 인식 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-  <!-- OCR -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+<title>QR & 텍스트 일치 검사</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
 
-    body {
-      font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        sans-serif;
+<!-- QR 인식 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 
-      max-width: 550px;
-      margin: 0 auto;
-      padding: 15px;
-      text-align: center;
-      background: #f5f6f8;
-    }
 
-    h2 {
-      margin-bottom: 15px;
-    }
+<!-- OCR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
 
-    /* 카메라 */
-    #video-container {
-      position: relative;
-      width: 100%;
-      border-radius: 12px;
-      overflow: hidden;
-      background: #000;
-      min-height: 280px;
-    }
 
-    video {
-      width: 100%;
-      display: block;
-    }
+<style>
 
-    canvas {
-      display: none;
-    }
+* {
+  box-sizing: border-box;
+}
 
-    /* 스캔 영역 */
-    #scan-guide {
-      position: absolute;
-      left: 10%;
-      top: 25%;
-      width: 80%;
-      height: 50%;
-      border: 3px solid #00ff00;
-      border-radius: 10px;
-      pointer-events: none;
-    }
+body {
 
-    #scan-guide::before {
-      content: "QR + 시리얼을 이 영역에 맞춰주세요";
-      position: absolute;
-      top: -30px;
-      left: 0;
-      width: 100%;
-      color: white;
-      font-size: 13px;
-      text-shadow: 0 1px 3px #000;
-    }
+  margin: 0;
+  padding: 12px;
 
-    /* 상태 */
-    .status-badge {
-      margin: 15px 0;
-      padding: 12px;
-      border-radius: 8px;
-      background: #e9ecef;
-      font-weight: bold;
-      font-size: 14px;
-    }
+  background: #f2f3f5;
 
-    /* 자동 스캔 */
-    .auto-scan {
-      margin-top: 12px;
-      padding: 10px;
-      background: #e7f1ff;
-      color: #0056b3;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: bold;
-    }
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
 
-    /* 인식 데이터 */
-    .data-box {
-      margin-top: 12px;
-      background: white;
-      border-radius: 10px;
-      padding: 12px;
-      text-align: left;
-    }
+  text-align: center;
 
-    .data-row {
-      padding: 9px 0;
-      border-bottom: 1px solid #eee;
-      font-size: 14px;
-    }
+}
 
-    .data-row:last-child {
-      border-bottom: none;
-    }
+h2 {
 
-    .label {
-      font-weight: bold;
-      display: inline-block;
-      width: 80px;
-    }
+  margin: 8px 0 14px;
 
-    /* PASS / FAIL */
-    #passFail {
-      display: none;
-      margin-top: 12px;
-      padding: 20px;
-      border-radius: 12px;
-      font-size: 42px;
-      font-weight: 900;
-    }
+  font-size: 22px;
 
-    #passFail.pass {
-      display: block;
-      background: #28a745;
-      color: white;
-    }
+}
 
-    #passFail.fail {
-      display: block;
-      background: #dc3545;
-      color: white;
-    }
 
-    /* 상세 결과 */
-    .result-box {
-      padding: 18px;
-      border-radius: 10px;
-      font-size: 20px;
-      font-weight: bold;
-      margin-top: 12px;
-    }
+/* ================================
+   카메라
+================================ */
 
-    .match {
-      background-color: #d4edda;
-      color: #155724;
-      border: 2px solid #28a745;
-    }
+#cameraBox {
 
-    .mismatch {
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 2px solid #dc3545;
-    }
+  position: relative;
 
-    .details {
-      font-size: 13px;
-      color: #555;
-      margin-top: 10px;
-      text-align: left;
-      line-height: 1.6;
-      word-break: break-all;
-      background: rgba(255,255,255,0.6);
-      padding: 10px;
-      border-radius: 6px;
-    }
+  width: 100%;
 
-    #scanCount {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #777;
-    }
-  </style>
+  background: #000;
+
+  border-radius: 14px;
+
+  overflow: hidden;
+
+}
+
+#video {
+
+  display: block;
+
+  width: 100%;
+
+  min-height: 300px;
+
+  object-fit: cover;
+
+  background: #000;
+
+}
+
+
+/* 검사 영역 */
+
+#guide {
+
+  position: absolute;
+
+  left: 5%;
+
+  top: 20%;
+
+  width: 90%;
+
+  height: 60%;
+
+  border: 3px solid #00ff00;
+
+  border-radius: 12px;
+
+  pointer-events: none;
+
+}
+
+
+#guideText {
+
+  position: absolute;
+
+  top: -32px;
+
+  left: 0;
+
+  width: 100%;
+
+  color: white;
+
+  font-size: 13px;
+
+  font-weight: bold;
+
+  text-shadow: 0 1px 5px #000;
+
+}
+
+
+/* 초점 */
+
+#focusText {
+
+  position: absolute;
+
+  bottom: 10px;
+
+  left: 0;
+
+  width: 100%;
+
+  color: white;
+
+  font-size: 12px;
+
+  text-shadow: 0 1px 5px #000;
+
+}
+
+
+canvas {
+
+  display: none;
+
+}
+
+
+/* ================================
+   버튼
+================================ */
+
+button {
+
+  width: 100%;
+
+  padding: 15px;
+
+  margin-top: 12px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  color: white;
+
+  font-size: 17px;
+
+  font-weight: bold;
+
+}
+
+
+#startButton {
+
+  background: #007bff;
+
+}
+
+
+#scanButton {
+
+  background: #28a745;
+
+}
+
+
+#nextButton {
+
+  background: #6c757d;
+
+}
+
+
+button:disabled {
+
+  background: #aaa;
+
+}
+
+
+/* ================================
+   상태
+================================ */
+
+#status {
+
+  margin-top: 12px;
+
+  padding: 12px;
+
+  border-radius: 10px;
+
+  background: #e9ecef;
+
+  font-weight: bold;
+
+  font-size: 14px;
+
+}
+
+
+/* ================================
+   PASS / FAIL
+================================ */
+
+#result {
+
+  display: none;
+
+  margin-top: 12px;
+
+  padding: 25px 10px;
+
+  border-radius: 14px;
+
+  font-size: 50px;
+
+  font-weight: 900;
+
+}
+
+
+#result.pass {
+
+  display: block;
+
+  background: #28a745;
+
+  color: white;
+
+}
+
+
+#result.fail {
+
+  display: block;
+
+  background: #dc3545;
+
+  color: white;
+
+}
+
+
+/* ================================
+   데이터
+================================ */
+
+.dataBox {
+
+  margin-top: 12px;
+
+  padding: 12px;
+
+  background: white;
+
+  border-radius: 12px;
+
+  text-align: left;
+
+}
+
+
+.row {
+
+  padding: 11px 0;
+
+  border-bottom: 1px solid #eee;
+
+  font-size: 14px;
+
+  word-break: break-all;
+
+}
+
+
+.row:last-child {
+
+  border-bottom: none;
+
+}
+
+
+.label {
+
+  display: inline-block;
+
+  width: 90px;
+
+  font-weight: bold;
+
+}
+
+
+/* OCR */
+
+#ocrStatus {
+
+  margin-top: 10px;
+
+  color: #666;
+
+  font-size: 13px;
+
+}
+
+
+</style>
+
 </head>
+
 
 <body>
 
-  <h2>📱 QR & 시리얼 자동 검증</h2>
 
-  <!-- 카메라 -->
-  <div id="video-container">
+<h2>📱 QR & 텍스트 일치 검사</h2>
 
-    <video
-      id="video"
-      playsinline
-      muted
-      autoplay>
-    </video>
 
-    <div id="scan-guide"></div>
+<!-- ================================
+     카메라
+================================ -->
 
-  </div>
+<div id="cameraBox">
 
-  <canvas id="canvas"></canvas>
 
-  <!-- 상태 -->
-  <div id="status" class="status-badge">
-    문자 인식 엔진 로딩 중...
-  </div>
+  <video
+    id="video"
+    autoplay
+    muted
+    playsinline
+    webkit-playsinline>
+  </video>
 
-  <!-- 자동 검사 -->
-  <div class="auto-scan">
-    🔄 자동 스캔 작동 중
-    <br>
-    QR과 시리얼을 화면에 비추면 자동으로 검사합니다.
-  </div>
 
-  <div id="scanCount">
-    검사 횟수: 0
-  </div>
+  <div id="guide">
 
-  <!-- 인식값 -->
-  <div class="data-box">
+    <div id="guideText">
 
-    <div class="data-row">
-      <span class="label">QR:</span>
-      <span id="qrValue">대기 중...</span>
-    </div>
+      QR과 인쇄된 문자를 화면 안에 맞춰주세요
 
-    <div class="data-row">
-      <span class="label">시리얼:</span>
-      <span id="serialValue">대기 중...</span>
     </div>
 
   </div>
 
-  <!-- PASS / FAIL -->
-  <div id="passFail"></div>
 
-  <!-- 상세 결과 -->
-  <div
-    id="resultBox"
-    class="result-box"
-    style="display:none;">
+  <div id="focusText">
+
+    🔍 자동 초점 준비
+
   </div>
+
+
+</div>
+
+
+<canvas id="canvas"></canvas>
+
+
+<!-- 카메라 시작 -->
+
+<button
+  id="startButton"
+  onclick="startCamera()">
+
+  📷 카메라 시작
+
+</button>
+
+
+<!-- 검사 버튼 -->
+
+<button
+  id="scanButton"
+  onclick="scanOnce()"
+  disabled>
+
+  🔎 검사하기
+
+</button>
+
+
+<!-- 다음 검사 -->
+
+<button
+  id="nextButton"
+  onclick="nextInspection()"
+  disabled>
+
+  🔄 다음 검사
+
+</button>
+
+
+<!-- 상태 -->
+
+<div id="status">
+
+  카메라 시작 버튼을 눌러주세요.
+
+</div>
+
+
+<!-- OCR 상태 -->
+
+<div id="ocrStatus">
+
+  OCR 엔진 준비 중...
+
+</div>
+
+
+<!-- 결과 -->
+
+<div id="result"></div>
+
+
+<!-- 인식 결과 -->
+
+<div class="dataBox">
+
+
+  <div class="row">
+
+    <span class="label">
+      QR 내용
+    </span>
+
+    <span id="qrValue">
+      대기 중
+    </span>
+
+  </div>
+
+
+  <div class="row">
+
+    <span class="label">
+      인쇄 문자
+    </span>
+
+    <span id="textValue">
+      대기 중
+    </span>
+
+  </div>
+
+
+  <div class="row">
+
+    <span class="label">
+      비교
+    </span>
+
+    <span id="compareValue">
+      대기 중
+    </span>
+
+  </div>
+
+
+</div>
+
 
 
 <script>
 
-  const video =
-    document.getElementById("video");
 
-  const canvas =
-    document.getElementById("canvas");
-
-  const ctx =
-    canvas.getContext("2d");
-
-  const statusEl =
-    document.getElementById("status");
-
-  const resultBox =
-    document.getElementById("resultBox");
-
-  const qrValue =
-    document.getElementById("qrValue");
-
-  const serialValue =
-    document.getElementById("serialValue");
-
-  const passFail =
-    document.getElementById("passFail");
-
-  const scanCountEl =
-    document.getElementById("scanCount");
+/* ==================================================
+   변수
+================================================== */
 
 
-  let worker = null;
-
-  let cameraReady = false;
-
-  let scanning = false;
-
-  let scanCount = 0;
-
-  let isProcessing = false;
+const video =
+  document.getElementById("video");
 
 
-  /*
-  =====================================================
-  문자열 정리
-  =====================================================
-  */
-
-  function normalize(text) {
-
-    return String(text || "")
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "");
-
-  }
+const canvas =
+  document.getElementById("canvas");
 
 
-  /*
-  =====================================================
-  OCR 오인식 보정
-  =====================================================
-  */
-
-  function correctOCR(text) {
-
-    return String(text || "")
-      .toUpperCase()
-      .replace(/O/g, "0")
-      .replace(/I/g, "1")
-      .replace(/L/g, "1");
-
-  }
-
-
-  /*
-  =====================================================
-  시리얼 추출
-  =====================================================
-  */
-
-  function extractSerial(text, qrText) {
-
-    if (!text) {
-      return "";
+const ctx =
+  canvas.getContext(
+    "2d",
+    {
+      willReadFrequently: true
     }
+  );
 
 
-    const corrected =
-      correctOCR(text);
+const status =
+  document.getElementById("status");
 
 
-    const lines =
-      corrected
-        .split(/\n+/)
-        .map(x => x.trim())
-        .filter(x => x.length > 0);
+const result =
+  document.getElementById("result");
 
 
-    const qrClean =
-      normalize(qrText);
+const qrValue =
+  document.getElementById("qrValue");
 
 
-    let candidates = [];
+const textValue =
+  document.getElementById("textValue");
 
 
-    lines.forEach(function(line) {
+const compareValue =
+  document.getElementById("compareValue");
 
-      const tokens =
-        line.match(/[A-Z0-9]{5,}/g);
 
+const ocrStatus =
+  document.getElementById("ocrStatus");
 
-      if (tokens) {
 
-        tokens.forEach(function(token) {
+const focusText =
+  document.getElementById("focusText");
 
-          candidates.push(token);
 
-        });
+const startButton =
+  document.getElementById("startButton");
 
-      }
 
-    });
+const scanButton =
+  document.getElementById("scanButton");
 
 
-    /*
-    QR 안에 포함된 값을 우선 찾음
-    */
+const nextButton =
+  document.getElementById("nextButton");
 
-    for (let candidate of candidates) {
 
-      if (
-        qrClean &&
-        (
-          qrClean.includes(candidate) ||
-          candidate.includes(qrClean)
-        )
-      ) {
+let stream = null;
 
-        return candidate;
+let cameraStarted = false;
 
-      }
+let processing = false;
 
-    }
+let ocrReady = false;
 
+let worker = null;
 
-    /*
-    가장 긴 문자열을 시리얼로 선택
-    */
+let inspectionFinished = false;
 
-    candidates.sort(function(a, b) {
 
-      return b.length - a.length;
+/* ==================================================
+   OCR 초기화
+================================================== */
 
-    });
 
+async function initOCR() {
 
-    return candidates.length > 0
-      ? candidates[0]
-      : "";
+  try {
 
-  }
+    ocrStatus.innerText =
+      "OCR 엔진 준비 중...";
 
 
-  /*
-  =====================================================
-  QR ↔ 시리얼 비교
-  =====================================================
-  */
-
-  function compareQRSerial(qr, serial) {
-
-    if (!qr || !serial) {
-
-      return false;
-
-    }
-
-
-    const cleanQR =
-      normalize(qr);
-
-    const cleanSerial =
-      normalize(serial);
-
-
-    if (!cleanQR || !cleanSerial) {
-
-      return false;
-
-    }
-
-
-    /*
-    시리얼이 QR 안에 있는 경우
-    */
-
-    if (cleanQR.includes(cleanSerial)) {
-
-      return true;
-
-    }
-
-
-    /*
-    QR이 OCR 결과 안에 있는 경우
-    */
-
-    if (cleanSerial.includes(cleanQR)) {
-
-      return true;
-
-    }
-
-
-    return false;
-
-  }
-
-
-  /*
-  =====================================================
-  PASS 표시
-  =====================================================
-  */
-
-  function showPASS(qr, serial) {
-
-    passFail.className = "pass";
-
-    passFail.innerHTML = "PASS";
-
-    resultBox.className =
-      "result-box match";
-
-    resultBox.style.display =
-      "block";
-
-
-    resultBox.innerHTML = `
-      ✅ QR / 시리얼 일치
-      <div class="details">
-        <b>인식된 QR:</b> ${qr}<br>
-        <b>인식된 시리얼:</b> ${serial}
-      </div>
-    `;
-
-
-    statusEl.innerText =
-      "✅ 검사 완료 : 정상";
-
-  }
-
-
-  /*
-  =====================================================
-  FAIL 표시
-  =====================================================
-  */
-
-  function showFAIL(qr, serial, reason) {
-
-    passFail.className = "fail";
-
-    passFail.innerHTML = "FAIL";
-
-    resultBox.className =
-      "result-box mismatch";
-
-    resultBox.style.display =
-      "block";
-
-
-    resultBox.innerHTML = `
-      ❌ QR / 시리얼 불일치
-      <div class="details">
-        <b>인식된 QR:</b> ${qr || "인식 실패"}<br>
-        <b>인식된 시리얼:</b> ${serial || "인식 실패"}<br>
-        <b>원인:</b> ${reason}
-      </div>
-    `;
-
-
-    statusEl.innerText =
-      "❌ 검사 결과 : FAIL";
-
-  }
-
-
-  /*
-  =====================================================
-  카메라 시작
-  =====================================================
-  */
-
-  async function startCamera() {
-
-    try {
-
-      let stream;
-
-
-      /*
-      후면 카메라 우선
-      */
-
-      try {
-
-        stream =
-          await navigator.mediaDevices
-            .getUserMedia({
-
-              video: {
-                facingMode: {
-                  exact: "environment"
-                }
-              },
-
-              audio: false
-
-            });
-
-      }
-
-      catch(e) {
-
-        stream =
-          await navigator.mediaDevices
-            .getUserMedia({
-
-              video: {
-                facingMode: "environment"
-              },
-
-              audio: false
-
-            });
-
-      }
-
-
-      video.srcObject = stream;
-
-      await video.play();
-
-
-      cameraReady = true;
-
-
-      statusEl.innerText =
-        "카메라 준비 완료";
-
-    }
-
-    catch(error) {
-
-      console.error(error);
-
-      statusEl.innerText =
-        "❌ 카메라를 사용할 수 없습니다. 카메라 권한을 확인해주세요.";
-
-    }
-
-  }
-
-
-  /*
-  =====================================================
-  OCR 엔진 시작
-  =====================================================
-  */
-
-  async function initOCR() {
-
-    try {
-
-      statusEl.innerText =
-        "문자 인식 엔진 준비 중...";
-
-
-      worker =
-        await Tesseract.createWorker("eng");
-
-
-      statusEl.innerText =
-        "✅ 준비 완료 - 자동 스캔 중";
-
-
-      startAutoScan();
-
-    }
-
-    catch(error) {
-
-      console.error(error);
-
-      statusEl.innerText =
-        "❌ 문자 인식 엔진 로딩 실패";
-
-    }
-
-  }
-
-
-  /*
-  =====================================================
-  자동 반복 스캔
-  =====================================================
-  */
-
-  function startAutoScan() {
-
-    if (scanning) {
-      return;
-    }
-
-
-    scanning = true;
-
-
-    autoScanLoop();
-
-  }
-
-
-  async function autoScanLoop() {
-
-    if (!scanning) {
-      return;
-    }
-
-
-    if (
-      cameraReady &&
-      worker &&
-      video.videoWidth > 0 &&
-      video.videoHeight > 0
-    ) {
-
-      await scanFrame();
-
-    }
-
-
-    /*
-    약 1.5초마다 자동 검사
-    */
-
-    setTimeout(function() {
-
-      autoScanLoop();
-
-    }, 1500);
-
-  }
-
-
-  /*
-  =====================================================
-  실제 검사
-  =====================================================
-  */
-
-  async function scanFrame() {
-
-    /*
-    OCR 중복 실행 방지
-    */
-
-    if (isProcessing) {
-      return;
-    }
-
-
-    isProcessing = true;
-
-
-    try {
-
-      scanCount++;
-
-
-      scanCountEl.innerText =
-        "검사 횟수: " + scanCount;
-
-
-      /*
-      카메라 화면 캡처
-      */
-
-      canvas.width =
-        video.videoWidth || 1280;
-
-      canvas.height =
-        video.videoHeight || 720;
-
-
-      ctx.drawImage(
-        video,
-        0,
-        0,
-        canvas.width,
-        canvas.height
+    worker =
+      await Tesseract.createWorker(
+        "eng"
       );
 
 
-      /*
-      ================================================
-      QR 인식
-      ================================================
-      */
-
-      const imageData =
-        ctx.getImageData(
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
+    ocrReady = true;
 
 
-      let qrText = "";
+    ocrStatus.innerText =
+      "✅ OCR 엔진 준비 완료";
 
 
-      if (window.jsQR) {
+  }
 
-        const qrCode =
-          jsQR(
-            imageData.data,
-            imageData.width,
-            imageData.height,
-            {
-              inversionAttempts:
-                "attemptBoth"
-            }
-          );
+  catch(error) {
+
+    console.error(error);
+
+    ocrStatus.innerText =
+      "❌ OCR 엔진 준비 실패";
+
+  }
+
+}
 
 
-        if (qrCode) {
+/* ==================================================
+   문자열 정리
+================================================== */
 
-          qrText =
-            qrCode.data.trim();
 
+/*
+  비교할 때
+
+  대문자/소문자 차이
+  공백
+  줄바꿈
+
+  때문에 오판하지 않도록 정리합니다.
+
+  하이픈(-)은 유지합니다.
+*/
+
+
+function normalize(text) {
+
+  return String(text || "")
+
+    .toUpperCase()
+
+    .replace(
+      /[\r\n]+/g,
+      " "
+    )
+
+    .replace(
+      /\s+/g,
+      " "
+    )
+
+    .trim();
+
+}
+
+
+/* ==================================================
+   OCR 문자 보정
+================================================== */
+
+
+function correctOCR(text) {
+
+  return String(text || "")
+
+    .toUpperCase()
+
+    /*
+      OCR에서 자주 생기는
+      문자 오류를 일부 보정
+    */
+
+    .replace(/\|/g, "I")
+
+    .replace(/[“”"]/g, "")
+
+    .replace(/[‘’']/g, "");
+
+}
+
+
+/* ==================================================
+   QR과 동일한 문자열 찾기
+================================================== */
+
+
+function findMatchingText(
+  ocrText,
+  qrText
+) {
+
+
+  const qr =
+    normalize(qrText);
+
+
+  const corrected =
+    correctOCR(ocrText);
+
+
+  /*
+    OCR 전체 문장을
+    한 줄로 변환
+  */
+
+  const ocr =
+    normalize(corrected);
+
+
+  /*
+    1. 전체 OCR과 정확히 같은 경우
+  */
+
+  if (
+    ocr === qr
+  ) {
+
+    return qr;
+
+  }
+
+
+  /*
+    2. OCR 문장 안에
+       QR 문자열이 들어있는 경우
+  */
+
+  if (
+    ocr.includes(qr)
+  ) {
+
+    return qr;
+
+  }
+
+
+  /*
+    3. OCR 줄 단위 검색
+  */
+
+  const lines =
+    corrected
+      .split(/\r?\n/)
+      .map(
+        line =>
+          normalize(line)
+      )
+      .filter(
+        line =>
+          line.length > 0
+      );
+
+
+  for (
+    const line of lines
+  ) {
+
+    if (
+      line === qr
+    ) {
+
+      return line;
+
+    }
+
+  }
+
+
+  return "";
+
+}
+
+
+/* ==================================================
+   카메라 시작
+================================================== */
+
+
+async function startCamera() {
+
+
+  if (cameraStarted) {
+
+    return;
+
+  }
+
+
+  try {
+
+
+    if (
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
+
+      status.innerText =
+        "❌ 이 브라우저에서는 카메라를 사용할 수 없습니다.";
+
+      return;
+
+    }
+
+
+    status.innerText =
+      "📷 카메라 권한 요청 중...";
+
+
+    /*
+      후면 카메라 우선
+    */
+
+    const constraints = {
+
+      audio: false,
+
+      video: {
+
+        facingMode: {
+          ideal: "environment"
+        },
+
+        width: {
+          ideal: 1280
+        },
+
+        height: {
+          ideal: 720
         }
 
       }
 
-
-      /*
-      ================================================
-      OCR
-      ================================================
-      */
-
-      const ocrResult =
-        await worker.recognize(canvas);
+    };
 
 
-      const detectedText =
-        ocrResult.data.text || "";
-
-
-      /*
-      ================================================
-      시리얼 추출
-      ================================================
-      */
-
-      const serial =
-        extractSerial(
-          detectedText,
-          qrText
+    stream =
+      await navigator
+        .mediaDevices
+        .getUserMedia(
+          constraints
         );
 
 
-      /*
-      화면에 인식값 표시
-      */
-
-      qrValue.innerText =
-        qrText || "인식 안됨";
-
-      serialValue.innerText =
-        serial || "인식 안됨";
+    video.srcObject =
+      stream;
 
 
-      /*
-      ================================================
-      아직 둘 다 인식되지 않은 경우
-      ================================================
-      */
-
-      if (!qrText && !serial) {
-
-        statusEl.innerText =
-          "QR + 시리얼을 카메라에 맞춰주세요.";
-
-        isProcessing = false;
-
-        return;
-
-      }
+    video.muted =
+      true;
 
 
-      /*
-      QR만 인식된 경우
-      */
-
-      if (!qrText) {
-
-        statusEl.innerText =
-          "QR 인식 중...";
-
-        isProcessing = false;
-
-        return;
-
-      }
+    video.setAttribute(
+      "playsinline",
+      ""
+    );
 
 
-      /*
-      시리얼만 인식된 경우
-      */
-
-      if (!serial) {
-
-        statusEl.innerText =
-          "시리얼 인식 중...";
-
-        isProcessing = false;
-
-        return;
-
-      }
+    video.setAttribute(
+      "webkit-playsinline",
+      ""
+    );
 
 
-      /*
-      ================================================
-      QR과 시리얼 비교
-      ================================================
-      */
-
-      const isMatch =
-        compareQRSerial(
-          qrText,
-          serial
-        );
+    await video.play();
 
 
-      /*
-      ================================================
-      최종 결과
-      ================================================
-      */
+    cameraStarted =
+      true;
 
-      if (isMatch) {
 
-        showPASS(
-          qrText,
-          serial
-        );
+    startButton.disabled =
+      true;
 
-      }
 
-      else {
+    startButton.innerText =
+      "📷 카메라 작동 중";
 
-        showFAIL(
-          qrText,
-          serial,
-          "QR 코드와 제품에 인쇄된 시리얼 번호가 다릅니다."
-        );
 
-      }
+    scanButton.disabled =
+      false;
+
+
+    status.innerText =
+      "✅ 카메라 준비 완료. 제품을 맞춰주세요.";
+
+
+    /*
+      자동초점
+    */
+
+    await enableAutoFocus();
+
+
+  }
+
+  catch(error) {
+
+
+    console.error(
+      error
+    );
+
+
+    cameraStarted =
+      false;
+
+
+    if (
+      error.name ===
+      "NotAllowedError"
+    ) {
+
+      status.innerText =
+        "❌ 카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라를 허용해주세요.";
 
     }
 
-    catch(error) {
+    else if (
+      error.name ===
+      "NotFoundError"
+    ) {
 
-      console.error(error);
+      status.innerText =
+        "❌ 카메라를 찾을 수 없습니다.";
 
-      statusEl.innerText =
-        "검사 중 오류가 발생했습니다.";
+    }
+
+    else {
+
+      status.innerText =
+        "❌ 카메라 실행 실패: " +
+        error.message;
+
+    }
+
+  }
+
+}
+
+
+/* ==================================================
+   자동초점
+================================================== */
+
+
+async function enableAutoFocus() {
+
+
+  try {
+
+
+    if (!stream) {
+
+      return;
 
     }
 
 
-    isProcessing = false;
+    const track =
+      stream.getVideoTracks()[0];
+
+
+    if (!track) {
+
+      return;
+
+    }
+
+
+    /*
+      카메라가 지원하는 기능 확인
+    */
+
+    const capabilities =
+      track.getCapabilities
+        ? track.getCapabilities()
+        : {};
+
+
+    /*
+      Continuous autofocus 지원
+    */
+
+    if (
+      capabilities.focusMode &&
+      capabilities.focusMode.includes(
+        "continuous"
+      )
+    ) {
+
+
+      await track.applyConstraints({
+
+        advanced: [
+
+          {
+            focusMode:
+              "continuous"
+          }
+
+        ]
+
+      });
+
+
+      focusText.innerText =
+        "🔍 자동 초점 활성화";
+
+
+    }
+
+    else {
+
+      focusText.innerText =
+        "🔍 카메라 자동 초점 사용";
+
+    }
+
+  }
+
+  catch(error) {
+
+    console.log(
+      "자동초점 설정:",
+      error
+    );
+
+    focusText.innerText =
+      "🔍 카메라 기본 자동 초점";
+
+  }
+
+}
+
+
+/* ==================================================
+   한 번만 검사
+================================================== */
+
+
+async function scanOnce() {
+
+
+  /*
+    이미 검사 완료면
+    다시 검사하지 않음
+  */
+
+  if (
+    inspectionFinished
+  ) {
+
+    return;
 
   }
 
 
-  /*
-  =====================================================
-  페이지 시작
-  =====================================================
-  */
+  if (
+    !cameraStarted
+  ) {
 
-  window.addEventListener(
-    "DOMContentLoaded",
-    function() {
+    alert(
+      "먼저 카메라를 시작해주세요."
+    );
 
-      startCamera();
+    return;
 
-      initOCR();
+  }
+
+
+  if (
+    processing
+  ) {
+
+    return;
+
+  }
+
+
+  if (
+    !ocrReady
+  ) {
+
+    status.innerText =
+      "⏳ OCR 엔진 준비 중입니다.";
+
+    return;
+
+  }
+
+
+  processing =
+    true;
+
+
+  scanButton.disabled =
+    true;
+
+
+  nextButton.disabled =
+    true;
+
+
+  result.style.display =
+    "none";
+
+
+  status.innerText =
+    "🔎 QR 코드 인식 중...";
+
+
+  try {
+
+
+    /*
+      카메라 프레임 캡처
+    */
+
+    const width =
+      video.videoWidth;
+
+
+    const height =
+      video.videoHeight;
+
+
+    if (
+      width <= 0 ||
+      height <= 0
+    ) {
+
+      throw new Error(
+        "카메라 영상이 준비되지 않았습니다."
+      );
 
     }
-  );
+
+
+    /*
+      모바일 처리 속도를 위해
+      최대 1280px
+    */
+
+    const maxWidth =
+      1280;
+
+
+    let drawWidth =
+      width;
+
+
+    let drawHeight =
+      height;
+
+
+    if (
+      drawWidth > maxWidth
+    ) {
+
+      const ratio =
+        maxWidth /
+        drawWidth;
+
+
+      drawWidth =
+        maxWidth;
+
+
+      drawHeight =
+        Math.round(
+          drawHeight *
+          ratio
+        );
+
+    }
+
+
+    canvas.width =
+      drawWidth;
+
+
+    canvas.height =
+      drawHeight;
+
+
+    ctx.drawImage(
+
+      video,
+
+      0,
+      0,
+
+      drawWidth,
+      drawHeight
+
+    );
+
+
+    /*
+      QR 인식
+    */
+
+    const imageData =
+      ctx.getImageData(
+        0,
+        0,
+        drawWidth,
+        drawHeight
+      );
+
+
+    let qrText = "";
+
+
+    if (
+      window.jsQR
+    ) {
+
+
+      const code =
+        jsQR(
+
+          imageData.data,
+
+          imageData.width,
+
+          imageData.height,
+
+          {
+            inversionAttempts:
+              "attemptBoth"
+          }
+
+        );
+
+
+      if (code) {
+
+        qrText =
+          code.data.trim();
+
+      }
+
+    }
+
+
+    /*
+      QR 실패
+    */
+
+    if (!qrText) {
+
+
+      result.className =
+        "fail";
+
+
+      result.innerHTML =
+        "FAIL";
+
+
+      result.style.display =
+        "block";
+
+
+      status.innerText =
+        "❌ QR 코드를 인식하지 못했습니다.";
+
+
+      compareValue.innerText =
+        "❌ QR 인식 실패";
+
+
+      nextButton.disabled =
+        false;
+
+
+      inspectionFinished =
+        true;
+
+
+      return;
+
+    }
+
+
+    qrValue.innerText =
+      qrText;
+
+
+    status.innerText =
+      "✅ QR 인식 완료 → 제품 문자 확인 중...";
+
+
+    /*
+      OCR 실행
+    */
+
+    const ocrResult =
+      await worker.recognize(
+        canvas
+      );
+
+
+    const detectedText =
+      ocrResult.data.text || "";
+
+
+    console.log(
+      "OCR 결과:",
+      detectedText
+    );
+
+
+    /*
+      QR과 같은 문자열이
+      OCR에 있는지 확인
+    */
+
+    const matchedText =
+      findMatchingText(
+        detectedText,
+        qrText
+      );
+
+
+    /*
+      ============================
+      PASS
+      ============================
+    */
+
+    if (
+      matchedText
+    ) {
+
+
+      textValue.innerText =
+        matchedText;
+
+
+      compareValue.innerText =
+        "✅ 일치";
+
+
+      result.className =
+        "pass";
+
+
+      result.innerHTML =
+        "PASS";
+
+
+      result.style.display =
+        "block";
+
+
+      status.innerText =
+        "✅ QR과 제품 인쇄 문자가 일치합니다.";
+
+
+      ocrStatus.innerText =
+        "검사 완료";
+
+
+    }
+
+
+    /*
+      ============================
+      FAIL
+      ============================
+    */
+
+    else {
+
+
+      const displayOCR =
+        normalize(
+          correctOCR(
+            detectedText
+          )
+        );
+
+
+      textValue.innerText =
+        displayOCR ||
+        "문자 인식 실패";
+
+
+      compareValue.innerText =
+        "❌ 불일치";
+
+
+      result.className =
+        "fail";
+
+
+      result.innerHTML =
+        "FAIL";
+
+
+      result.style.display =
+        "block";
+
+
+      status.innerText =
+        "❌ QR과 제품 인쇄 문자가 일치하지 않습니다.";
+
+
+      ocrStatus.innerText =
+        "검사 완료";
+
+    }
+
+
+    /*
+      검사 종료
+    */
+
+    inspectionFinished =
+      true;
+
+
+    /*
+      다음 검사 버튼 활성화
+    */
+
+    nextButton.disabled =
+      false;
+
+
+  }
+
+  catch(error) {
+
+
+    console.error(
+      "검사 오류:",
+      error
+    );
+
+
+    result.className =
+      "fail";
+
+
+    result.innerHTML =
+      "ERROR";
+
+
+    result.style.display =
+      "block";
+
+
+    status.innerText =
+      "❌ 검사 중 오류가 발생했습니다.";
+
+
+    nextButton.disabled =
+      false;
+
+
+    inspectionFinished =
+      true;
+
+  }
+
+
+  processing =
+    false;
+
+}
+
+
+/* ==================================================
+   다음 검사
+================================================== */
+
+
+function nextInspection() {
+
+
+  /*
+    결과 초기화
+  */
+
+  result.style.display =
+    "none";
+
+
+  qrValue.innerText =
+    "대기 중";
+
+
+  textValue.innerText =
+    "대기 중";
+
+
+  compareValue.innerText =
+    "대기 중";
+
+
+  ocrStatus.innerText =
+    "다음 검사 대기";
+
+
+  status.innerText =
+    "📷 다음 제품을 카메라에 맞춰주세요.";
+
+
+  /*
+    다시 검사 가능
+  */
+
+  inspectionFinished =
+    false;
+
+
+  nextButton.disabled =
+    true;
+
+
+  scanButton.disabled =
+    false;
+
+}
+
+
+/* ==================================================
+   페이지 로딩
+================================================== */
+
+
+window.addEventListener(
+  "DOMContentLoaded",
+  function() {
+
+    /*
+      OCR은 미리 준비
+    */
+
+    initOCR();
+
+  }
+);
+
 
 </script>
 
 </body>
+
 </html>
+```
