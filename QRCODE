@@ -1,0 +1,522 @@
+```html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>QR ↔ TEXT 검사</title>
+
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    color: #222;
+}
+
+.container {
+    max-width: 700px;
+    margin: auto;
+    padding: 15px;
+}
+
+h1 {
+    text-align: center;
+    margin: 10px 0 20px;
+}
+
+.box {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+
+#qr-reader {
+    width: 100%;
+}
+
+.result {
+    background: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 45px;
+    word-break: break-all;
+    font-size: 18px;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+#ocrButton {
+    background: #333;
+    color: white;
+}
+
+#compareButton {
+    background: #1976d2;
+    color: white;
+}
+
+#resetButton {
+    background: #777;
+    color: white;
+}
+
+video {
+    width: 100%;
+    border-radius: 10px;
+    background: black;
+}
+
+#ocrCanvas {
+    display: none;
+}
+
+#status {
+    text-align: center;
+    font-size: 38px;
+    font-weight: bold;
+    padding: 25px 10px;
+    border-radius: 12px;
+    margin-top: 15px;
+}
+
+.wait {
+    background: #eeeeee;
+}
+
+.pass {
+    background: #b9f6ca;
+    color: #087f23;
+}
+
+.ng {
+    background: #ffcdd2;
+    color: #b71c1c;
+}
+
+.info {
+    font-size: 14px;
+    color: #666;
+    margin-top: 8px;
+}
+
+.loading {
+    text-align: center;
+    padding: 15px;
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>📷 QR ↔ TEXT 검사</h1>
+
+<!-- QR 검사 -->
+<div class="box">
+
+    <div class="title">① QR 코드 스캔</div>
+
+    <div id="qr-reader"></div>
+
+    <div class="info">
+        QR 코드를 카메라 안에 맞춰주세요.
+    </div>
+
+    <div class="result" id="qrResult">
+        QR 코드를 스캔해주세요.
+    </div>
+
+</div>
+
+
+<!-- 문자 검사 -->
+<div class="box">
+
+    <div class="title">② 제품 인쇄 문자 검사</div>
+
+    <video id="camera" autoplay playsinline></video>
+
+    <canvas id="ocrCanvas"></canvas>
+
+    <button id="ocrButton">
+        📷 제품 문자 촬영 및 인식
+    </button>
+
+    <div class="loading" id="ocrLoading">
+        문자 인식 중입니다... 잠시 기다려주세요.
+    </div>
+
+    <div class="result" id="textResult">
+        아직 문자를 인식하지 않았습니다.
+    </div>
+
+</div>
+
+
+<!-- 비교 -->
+<div class="box">
+
+    <div class="title">③ 비교 결과</div>
+
+    <button id="compareButton">
+        🔍 QR 코드와 문자 비교
+    </button>
+
+    <div id="status" class="wait">
+        검사 대기
+    </div>
+
+</div>
+
+
+<!-- 초기화 -->
+<div class="box">
+
+    <button id="resetButton">
+        🔄 초기화
+    </button>
+
+</div>
+
+</div>
+
+
+<script>
+
+let qrText = "";
+let ocrText = "";
+
+let cameraStream = null;
+
+
+/* =========================
+   QR CODE SCANNER
+========================= */
+
+function qrSuccess(decodedText, decodedResult) {
+
+    qrText = decodedText;
+
+    document.getElementById("qrResult").textContent = qrText;
+
+    /*
+       QR을 한 번 읽으면 스캐너를 멈춤
+       반복검사 없음
+    */
+
+    if (window.qrScanner) {
+        window.qrScanner.stop().catch(() => {});
+    }
+}
+
+
+window.qrScanner = new Html5Qrcode("qr-reader");
+
+Html5Qrcode.getCameras()
+.then(devices => {
+
+    if (devices && devices.length) {
+
+        let cameraId = devices[0].id;
+
+        /*
+           후면 카메라 우선
+        */
+
+        for (let camera of devices) {
+
+            if (
+                camera.label &&
+                (
+                    camera.label.toLowerCase().includes("back") ||
+                    camera.label.includes("후면")
+                )
+            ) {
+                cameraId = camera.id;
+                break;
+            }
+        }
+
+        qrScanner.start(
+            cameraId,
+            {
+                fps: 10,
+                qrbox: {
+                    width: 250,
+                    height: 250
+                }
+            },
+            qrSuccess,
+            function(errorMessage) {
+                // QR 검색 중에는 오류 메시지를 표시하지 않음
+            }
+        );
+
+    } else {
+
+        document.getElementById("qrResult").textContent =
+            "카메라를 찾을 수 없습니다.";
+
+    }
+
+})
+.catch(err => {
+
+    document.getElementById("qrResult").textContent =
+        "카메라 권한을 허용해주세요.";
+
+});
+
+
+/* =========================
+   PRODUCT TEXT CAMERA
+========================= */
+
+async function startCamera() {
+
+    try {
+
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: {
+                    ideal: "environment"
+                }
+            },
+            audio: false
+        });
+
+        const video = document.getElementById("camera");
+
+        video.srcObject = cameraStream;
+
+    } catch (error) {
+
+        alert(
+            "카메라를 사용할 수 없습니다.\n\n" +
+            "브라우저의 카메라 권한을 허용해주세요."
+        );
+
+    }
+
+}
+
+startCamera();
+
+
+/* =========================
+   OCR
+========================= */
+
+document.getElementById("ocrButton").addEventListener(
+"click",
+async function() {
+
+    const video = document.getElementById("camera");
+    const canvas = document.getElementById("ocrCanvas");
+
+    const loading = document.getElementById("ocrLoading");
+
+    /*
+       영상 크기에 맞춰 캔버스 생성
+    */
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+
+    ctx.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    loading.style.display = "block";
+
+    document.getElementById("textResult").textContent =
+        "문자 인식 중...";
+
+    try {
+
+        const result = await Tesseract.recognize(
+            canvas,
+            "eng",
+            {
+                logger: function(info) {
+
+                    if (info.status === "recognizing text") {
+
+                        loading.textContent =
+                            "문자 인식 중... " +
+                            Math.round(info.progress * 100) +
+                            "%";
+
+                    }
+
+                }
+            }
+        );
+
+        /*
+           OCR 결과
+        */
+
+        ocrText = result.data.text.trim();
+
+        document.getElementById("textResult").textContent =
+            ocrText || "문자를 인식하지 못했습니다.";
+
+    } catch (error) {
+
+        ocrText = "";
+
+        document.getElementById("textResult").textContent =
+            "문자 인식 오류";
+
+    }
+
+    loading.style.display = "none";
+
+});
+
+
+/* =========================
+   COMPARE
+========================= */
+
+document.getElementById("compareButton").addEventListener(
+"click",
+function() {
+
+    const status = document.getElementById("status");
+
+    if (!qrText) {
+
+        status.className = "ng";
+        status.textContent = "QR 코드 없음";
+
+        return;
+    }
+
+    if (!ocrText) {
+
+        status.className = "ng";
+        status.textContent = "문자 없음";
+
+        return;
+    }
+
+    /*
+       OCR에서 생기는 줄바꿈만 제거
+       실제 문자/공백 내용은 비교
+    */
+
+    const qrCompare =
+        qrText.replace(/\r?\n/g, "").trim();
+
+    const textCompare =
+        ocrText.replace(/\r?\n/g, "").trim();
+
+
+    if (qrCompare === textCompare) {
+
+        status.className = "pass";
+        status.textContent = "PASS ✓";
+
+    } else {
+
+        status.className = "ng";
+        status.textContent = "NG ✕";
+
+    }
+
+});
+
+
+/* =========================
+   RESET
+========================= */
+
+document.getElementById("resetButton").addEventListener(
+"click",
+function() {
+
+    qrText = "";
+    ocrText = "";
+
+    document.getElementById("qrResult").textContent =
+        "QR 코드를 스캔해주세요.";
+
+    document.getElementById("textResult").textContent =
+        "아직 문자를 인식하지 않았습니다.";
+
+    const status = document.getElementById("status");
+
+    status.className = "wait";
+    status.textContent = "검사 대기";
+
+    /*
+       QR 카메라 다시 시작
+    */
+
+    Html5Qrcode.getCameras()
+    .then(devices => {
+
+        if (devices && devices.length) {
+
+            qrScanner.start(
+                devices[0].id,
+                {
+                    fps: 10,
+                    qrbox: {
+                        width: 250,
+                        height: 250
+                    }
+                },
+                qrSuccess,
+                function(errorMessage) {}
+            );
+
+        }
+
+    });
+
+});
+
+
+</script>
+
+</body>
+</html>
+```
